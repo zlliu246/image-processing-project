@@ -372,7 +372,7 @@ def get_boxes(boxes, labels, thresh):
 				# don't break, many labels may trigger for one box
 	return v_boxes, v_labels, v_scores
                      
-def draw_boxes(image, boxes, labels, obj_thresh):
+def draw_boxes(image, boxes, labels, obj_thresh, wanted_labels):
     for box in boxes:
         label_str = ''
         label = -1
@@ -381,9 +381,9 @@ def draw_boxes(image, boxes, labels, obj_thresh):
             if box.classes[i] > obj_thresh:
                 label_str += labels[i]
                 label = i
-                print(labels[i] + ': ' + str(box.classes[i]*100) + '%')
+                # print(labels[i] + ': ' + str(box.classes[i]*100) + '%')
                 
-        if label >= 0:
+        if label >= 0 and label_str in wanted_labels:
             cv2.rectangle(image, (box.xmin,box.ymin), (box.xmax,box.ymax), (0,255,0), 3)
             cv2.putText(image, 
                         label_str + ' ' + str(box.get_score()), 
