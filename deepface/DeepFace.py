@@ -537,7 +537,7 @@ def find(img_path, db_path, model_name ='VGG-Face', distance_metric = 'cosine', 
 		
 		if path.exists(db_path+"/"+file_name):
 			
-			print("WARNING: Representations for images in ",db_path," folder were previously stored in ", file_name, ". If you added new instances after this file creation, then please delete this file and call find function again. It will create it again.")
+			# print("WARNING: Representations for images in ",db_path," folder were previously stored in ", file_name, ". If you added new instances after this file creation, then please delete this file and call find function again. It will create it again.")
 			
 			f = open(db_path+'/'+file_name, 'rb')
 			representations = pickle.load(f)
