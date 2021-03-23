@@ -392,7 +392,34 @@ def draw_boxes(image, boxes, labels, obj_thresh, wanted_labels):
                         1e-3 * image.shape[0], 
                         (0,255,0), 2)
         
-    return image      
+    return image
+
+
+def get_wanted_boxes(boxes, labels, obj_thresh, wanted_labels):
+    """
+    returns bounding boxes that are in wanted_labels and the labels i.e. [(x1, y1), (x2, y2), "Laptop"]
+    """
+    person_boxes = []
+    object_boxes = []
+
+    for box in boxes:
+        label_str = ''
+        label = -1
+
+        for i in range(len(labels)):
+            if box.classes[i] > obj_thresh:
+                label_str += labels[i]
+                label = i
+                # print(labels[i] + ': ' + str(box.classes[i]*100) + '%')
+
+        if label >= 0 and label_str in wanted_labels:
+            if label_str == "person":
+                person_boxes.append([(box.xmin,box.ymin), (box.xmax,box.ymax)])
+            if label_str == "laptop":
+                object_boxes.append([(box.xmin,box.ymin), (box.xmax,box.ymax)])
+
+    return person_boxes, object_boxes
+
 
 def _main_(args):
     weights_path = args.weights

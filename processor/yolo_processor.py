@@ -39,6 +39,7 @@ def detect_objects_yolo(image):
     do_nms(boxes, nms_thresh)   
 
     # draw bounding boxes on the image using labels
-    draw_boxes(image, boxes, labels, obj_thresh, wanted_labels) 
+    draw_boxes(image, boxes, labels, obj_thresh, wanted_labels)
+    person_boxes, object_boxes = get_wanted_boxes(boxes, labels, obj_thresh, wanted_labels)
 
-    return (image).astype('uint8')
+    return (image).astype('uint8'), person_boxes, object_boxes

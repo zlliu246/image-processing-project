@@ -13,9 +13,9 @@ from deepface.commons.functions import initialize_detector, load_image, detect_f
 from processor import process
 
 # constants
-VIDEO_PATH = "dataset/demo3.mp4"
+VIDEO_PATH = "dataset/demo_10.mp4"
 OUTPUT_PATH = "output.avi"
-FPS = 2
+FPS = 30
 
 current_frame = 1
 cap = cv2.VideoCapture(VIDEO_PATH)
