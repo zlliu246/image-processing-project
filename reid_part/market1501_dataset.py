@@ -39,38 +39,47 @@ def get_id(path, s):
     IDs = list(set(IDs))
     return IDs
 
-def read_data(path, set, ids, image_width, image_height, batch_size):
+def read_data(path, set, ids):
+    neg = None
     while True:
-        batch_images1 = []
-        batch_images2 = []
+#         batch_images1 = []
+#         batch_images2 = []
         labels = []
-        while len(labels) < batch_size:
-            try:
-                pairs = [get_pair(path, set, ids, True), get_pair(path, set, ids, False)]  
-                for pair in pairs:
-                    images = []
-                    for p in pair:
+        if neg == None:
+            pairs = [get_pair(path, set, ids, True), get_pair(path, set, ids, False)]
+            neg = pairs[1]
+            yield {"input_1":pairs[0][0], "input_2":pairs[0][1]}, np.array([1., 0.])
+        else:
+            temp = neg
+            neg = None
+            yield {"input_1":temp[0], "input_2":temp[1]}, np.array([0., 1.])
+#         while True:
+#             try:
+#                 pairs = [get_pair(path, set, ids, True), get_pair(path, set, ids, False)]  
+#                 for pair in pairs:
+#                     images = []
+#                     for p in pair:
 
-                        image = cv2.imread(p)
-                        image = cv2.resize(image, (image_width, image_height))
-                        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-                        images.append(image)
-                    batch_images1.append(images[0])
-                    batch_images2.append(images[1])
-                labels.append([1., 0.])
-                labels.append([0., 1.])
-            except:
-                print(pairs)
+# #                         image = cv2.imread(p)
+# #                         image = cv2.resize(image, (image_width, image_height))
+# #                         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+#                         images.append(p)
+#                     batch_images1.append(images[0])
+#                     batch_images2.append(images[1])
+#                 labels.append([1., 0.])
+#                 labels.append([0., 1.])
+#             except:
+#                 print(pairs)
 
-        '''
-        for pair in batch_images:
-            for p in pair:
-                cv2.imshow('img', p)
-                key = cv2.waitKey(0)
-                if key == 1048603:
-                    exit()
-        '''
-        yield {"input_1":np.array(batch_images1), "input_2":np.array(batch_images2)}, np.array(labels)
+#         '''
+#         for pair in batch_images:
+#             for p in pair:
+#                 cv2.imshow('img', p)
+#                 key = cv2.waitKey(0)
+#                 if key == 1048603:
+#                     exit()
+#         '''
+#         yield {"input_1":np.array(batch_images1), "input_2":np.array(batch_images2)}, np.array(labels)
 
 # if __name__ == '__main__':
     #test

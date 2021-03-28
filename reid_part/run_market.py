@@ -1,6 +1,19 @@
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-d", "--data_dir", dest="data_dir", type=str, metavar='<str>', default='datasets', help='path to dataset')
+parser.add_argument('-e','--epochs', dest="epochs", type=int, metavar='<int>', default=100, help='max epochs for training')
+parser.add_argument('-b','--batch_size', dest="batch_size", type=int, metavar='<int>', default=32, help='batch_size for training')
+parser.add_argument('-l','--logs', dest="logs_dir", type=str, metavar='<str>',default='logs/', help='path to logs')
+parser.add_argument('-m', '--mode', dest='mode', type=str, metavar='<str>', default='train', help='mode - train, val, or test')
+parser.add_argument('-s', '--save', dest='save', type=str, metavar='<str>', help='mode - train, val, or test')
+parser.add_argument('-g', '--gpu',dest='gpu',type=int,metavar='<int>')
+
+FLAGS = parser.parse_args()
+
 import os
 os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+os.environ['CUDA_VISIBLE_DEVICES'] = str(FLAGS.gpu)
 
 import tensorflow as tf
 from tensorflow.keras import Input
@@ -11,30 +24,12 @@ import market1501_dataset
 from tensorflow.keras.models import Model, load_model
 from tensorflow.keras import optimizers
 
-import argparse
-
-parser = argparse.ArgumentParser()
-parser.add_argument("-d", "--data_dir", dest="data_dir", type=str, metavar='<str>', default='datasets', help='path to dataset')
-parser.add_argument('-e','--epochs', dest="epochs", type=int, metavar='<int>', default=500, help='max epochs for training')
-parser.add_argument('-b','--batch_size', dest="batch_size", type=int, metavar='<int>', default=32, help='batch_size for training')
-parser.add_argument('-l','--logs', dest="logs_dir", type=str, metavar='<str>',default='logs/', help='path to logs')
-parser.add_argument('-m', '--mode', dest='mode', type=str, metavar='<str>', default='train', help='mode - train, val, or test')
-
-FLAGS = parser.parse_args()
-    
 IMAGE_WIDTH = 60
 IMAGE_HEIGHT = 160
 
-
-def process_train(images):
-    split = tf.split(images, FLAGS.batch_size, axis=0)
-    for i in range(FLAGS.batch_size):
-        split[i] = tf.reshape(split[i], shape=[IMAGE_HEIGHT, IMAGE_WIDTH, 3])
-        split[i] = process(split[i])
-    split = tf.stack(split)
-    return split
-    
-def process(img):
+def process_img_train(file_path):
+    img = tf.io.read_file(file_path)
+    img = tf.image.decode_jpeg(img, channels=3)
     img = tf.image.resize(img, [IMAGE_HEIGHT + 8, IMAGE_WIDTH + 3])
     img = tf.image.random_crop(img, [IMAGE_HEIGHT, IMAGE_WIDTH, 3])
     img = tf.image.random_flip_left_right(img)
@@ -42,19 +37,24 @@ def process(img):
     img = tf.image.random_hue(img, max_delta=0.2)
     img = tf.image.random_contrast(img, lower=0.5, upper=1.5)
     img = tf.image.per_image_standardization(img)
+    print(img.get_shape())
+    img.set_shape([IMAGE_HEIGHT, IMAGE_WIDTH, 3])
     return img
 
-def process_test_single(img):
-    return tf.image.per_image_standardization(img)
+def process_img_test(file_path):
+    img = tf.io.read_file(file_path)
+    img = tf.image.decode_jpeg(img, channels=3)
+    img = tf.image.resize(img, [IMAGE_HEIGHT, IMAGE_WIDTH])
+    img = tf.image.per_image_standardization(img)
+    print(img.get_shape())
+    img.set_shape([IMAGE_HEIGHT, IMAGE_WIDTH, 3])
+    return img
 
-def process_test(images):
-    split = tf.split(images, FLAGS.batch_size, axis=0)
-    for i in range(FLAGS.batch_size):
-        split[i] = process_test_single(split[i])
-    split = tf.stack(split)
-    return split
+def process_label(y):
+    y.set_shape([2])
+    return y
 
-def network(weight_decay):
+def network(weight_decay, batch_size):
     images1 = Input(name='input_1', shape=(IMAGE_HEIGHT, IMAGE_WIDTH, 3), dtype=tf.float32)
     images2 = Input(name='input_2', shape=(IMAGE_HEIGHT, IMAGE_WIDTH, 3), dtype=tf.float32)
     
@@ -75,12 +75,12 @@ def network(weight_decay):
     # Cross-Input Neighborhood Differences
     trans = tf.transpose(pool1_2, [0, 3, 1, 2])
     shape = trans.get_shape().as_list()
-    m1s = tf.ones([FLAGS.batch_size, shape[1], shape[2], shape[3], 5, 5])
-    reshape = tf.reshape(trans, [FLAGS.batch_size, shape[1], shape[2], shape[3], 1, 1])
+    m1s = tf.ones([batch_size, shape[1], shape[2], shape[3], 5, 5])
+    reshape = tf.reshape(trans, [batch_size, shape[1], shape[2], shape[3], 1, 1])
     f = tf.multiply(reshape, m1s)
 
     trans = tf.transpose(pool2_2, [0, 3, 1, 2])
-    reshape = tf.reshape(trans, [1, FLAGS.batch_size, shape[1], shape[2], shape[3]])
+    reshape = tf.reshape(trans, [1, batch_size, shape[1], shape[2], shape[3]])
     g = []
     pad = tf.pad(reshape, [[0, 0], [0, 0], [0, 0], [2, 2], [2, 2]])
     for i in range(shape[2]):
@@ -88,10 +88,10 @@ def network(weight_decay):
             g.append(pad[:,:,:,i:i+5,j:j+5])
 
     concat = tf.concat(g, axis=0)
-    reshape = tf.reshape(concat, [shape[2], shape[3], FLAGS.batch_size, shape[1], 5, 5])
+    reshape = tf.reshape(concat, [shape[2], shape[3], batch_size, shape[1], 5, 5])
     g = tf.transpose(reshape, [2, 3, 0, 1, 4, 5])
-    reshape1 = tf.reshape(tf.subtract(f, g), [FLAGS.batch_size, shape[1], shape[2] * 5, shape[3] * 5])
-    reshape2 = tf.reshape(tf.subtract(g, f), [FLAGS.batch_size, shape[1], shape[2] * 5, shape[3] * 5])
+    reshape1 = tf.reshape(tf.subtract(f, g), [batch_size, shape[1], shape[2] * 5, shape[3] * 5])
+    reshape2 = tf.reshape(tf.subtract(g, f), [batch_size, shape[1], shape[2] * 5, shape[3] * 5])
     k1 = tf.nn.relu(tf.transpose(reshape1, [0, 2, 3, 1]), name='k1')
     k2 = tf.nn.relu(tf.transpose(reshape2, [0, 2, 3, 1]), name='k2')
 
@@ -111,7 +111,7 @@ def network(weight_decay):
 
     # Higher-Order Relationships
     concat = keras.layers.Concatenate(axis=3) ([pool_m1, pool_m2])
-    reshape = tf.reshape(concat, [FLAGS.batch_size, -1])
+    reshape = tf.reshape(concat, [batch_size, -1])
     fc1 = keras.layers.Dense( 500, tf.nn.relu, name='fc1') (reshape)
     fc2 = keras.layers.Dense( 2, name='fc2') (fc1)
     fc2 = keras.layers.Activation('softmax')(fc2)
@@ -123,70 +123,66 @@ def network(weight_decay):
 def load_model(model_path):
     weight_decay = 0.0005
     FLAGS.batch_size = 1
-    model = network(weight_decay)
+    model = network(weight_decay, FLAGS.batch_size)
+    
     model.load_weights(model_path)
+    
+    lr = 0.001
+
+    optim = optimizers.Adam(learning_rate=lr)
+
+    model.compile(loss='binary_crossentropy',
+                  optimizer=optim,
+                  metrics=['acc'])
+    
+    model.summary()
+    
     return model
 
 def check_images(model, image1, image2):
-
-    image1 = cv2.imread(image1)
-    image1 = cv2.resize(image1, (IMAGE_WIDTH, IMAGE_HEIGHT))
-    image1 = cv2.cvtColor(image1, cv2.COLOR_BGR2RGB)
-    image1 = np.reshape(image1, (1, IMAGE_HEIGHT, IMAGE_WIDTH, 3)).astype(float)
-    image2 = cv2.imread(image2)
-    image2 = cv2.resize(image2, (IMAGE_WIDTH, IMAGE_HEIGHT))
-    image2 = cv2.cvtColor(image2, cv2.COLOR_BGR2RGB)
-    image2 = np.reshape(image2, (1, IMAGE_HEIGHT, IMAGE_WIDTH, 3)).astype(float)
-    
-    image1 = process_test_single(image1)
-    image2 = process_test_single(image2)
-#     print(image1.get_shape())
-#     test_images = tf.stack([image1, image2])
-    pred = model.predict({'input_1':image1,'input_2':image2})
-    return bool(not np.argmax(pred[0]))
+    image1 = tf.expand_dims(process_img_test(image1),axis=0)
+    image2 = tf.expand_dims(process_img_test(image2),axis=0)
+    print('img1:', image1.numpy().shape)
+    print('img2:', image2.numpy().shape)
+    pred = model.predict(x={"input_1":image1, "input_2":image2}, batch_size=1)
+    return bool(not np.argmax(pred,axis=1)), np.max(pred, axis=1)
 
 if __name__ == "__main__":
     
     print('getting ids')
     train_ids = market1501_dataset.get_id(FLAGS.data_dir, 'bounding_box_train')
-    gen = market1501_dataset.read_data(FLAGS.data_dir, 'bounding_box_train', train_ids,
-            IMAGE_WIDTH, IMAGE_HEIGHT, FLAGS.batch_size)
+    gen = market1501_dataset.read_data(FLAGS.data_dir, 'bounding_box_train', train_ids)
         
     ds = tf.data.Dataset.from_generator(
         lambda: gen ,
-        output_types=({"input_1":tf.float32, "input_2":tf.float32}, tf.float32),
-        output_shapes=({"input_1":[FLAGS.batch_size, IMAGE_HEIGHT, IMAGE_WIDTH, 3], 
-                        "input_2":[FLAGS.batch_size, IMAGE_HEIGHT, IMAGE_WIDTH,3]},
-                       [FLAGS.batch_size, 2])
+            output_types=({"input_1":tf.string, "input_2":tf.string}, tf.float32)
     )
     print('tf.data loaded')
     
     ds = ds.map(lambda x, y : ( 
-        {"input_1" : process_train(x['input_1']), 
-         "input_2" : process_train(x['input_2'])},
-        y))
+        {"input_1" : process_img_train(x['input_1']), 
+         "input_2" : process_img_train(x['input_2'])},
+        process_label(y))).batch(FLAGS.batch_size).prefetch(FLAGS.batch_size)
                 
     print('data mapping working')
     
     test_ids = market1501_dataset.get_id(FLAGS.data_dir, 'bounding_box_test')
-    test_gen = market1501_dataset.read_data(FLAGS.data_dir, 'bounding_box_test', test_ids,
-                                            IMAGE_WIDTH, IMAGE_HEIGHT, FLAGS.batch_size)
+    test_gen = market1501_dataset.read_data(FLAGS.data_dir, 'bounding_box_test', test_ids)
     test_ds = tf.data.Dataset.from_generator(
         lambda: test_gen ,
-            output_types=({"input_1":tf.float32, "input_2":tf.float32}, tf.float32),
-            output_shapes=({"input_1":[FLAGS.batch_size, IMAGE_HEIGHT, IMAGE_WIDTH, 3], 
-                            "input_2":[FLAGS.batch_size, IMAGE_HEIGHT, IMAGE_WIDTH,3]},
-                           [FLAGS.batch_size, 2])
-        )
+            output_types=({"input_1":tf.string, "input_2":tf.string}, tf.float32)
+    )
+        
+    test_ds = test_ds.map(lambda x, y : ( 
+        {"input_1" : process_img_test(x['input_1']), 
+         "input_2" : process_img_test(x['input_2'])},
+        process_label(y))).batch(FLAGS.batch_size).prefetch(FLAGS.batch_size)
     print('test tf.data loaded')
-
-    if FLAGS.mode == 'test':
-        FLAGS.batch_size = 1
 
     weight_decay = 0.0005
 
     print('Build network')
-    model = network(weight_decay)
+    model = network(weight_decay, FLAGS.batch_size)
     # print(model.summary())
 
     lr = 0.001
@@ -196,7 +192,7 @@ if __name__ == "__main__":
     model.compile(loss='binary_crossentropy',
                   optimizer=optim,
                   metrics=['acc'])
-    checkpoint = tf.keras.callbacks.ModelCheckpoint(filepath='reid_model.h5', mode='max', monitor='val_acc', verbose=2, save_best_only=True)
+    checkpoint = tf.keras.callbacks.ModelCheckpoint(filepath=FLAGS.save, mode='max', monitor='val_acc', verbose=2, save_best_only=True)
 
     history = model.fit(
         x=ds, epochs=100, verbose=1, callbacks=[checkpoint],
