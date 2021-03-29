@@ -135,17 +135,33 @@ def load_model(model_path):
                   optimizer=optim,
                   metrics=['acc'])
     
-    model.summary()
-    
     return model
 
-def check_images(model, image1, image2):
-    image1 = tf.expand_dims(process_img_test(image1),axis=0)
-    image2 = tf.expand_dims(process_img_test(image2),axis=0)
-    print('img1:', image1.numpy().shape)
-    print('img2:', image2.numpy().shape)
-    pred = model.predict(x={"input_1":image1, "input_2":image2}, batch_size=1)
-    return bool(not np.argmax(pred,axis=1)), np.max(pred, axis=1)
+def check_images(model, image, db):
+#     image1 = tf.expand_dims(process_img_test(image1),axis=0)
+#     image2 = tf.expand_dims(process_img_test(image2),axis=0)
+#     print('img1:', image1.numpy().shape)
+#     print('img2:', image2.numpy().shape)
+    
+    def x():
+        output = []
+        for i in range(len(db)):
+            output.append({'input_1':image, 'input_2':db[i]})
+        return output
+    
+    test_ds = tf.data.Dataset.from_generator(
+        lambda: x() ,
+            output_types=({"input_1":tf.string, "input_2":tf.string})
+    )
+        
+    test_ds = test_ds.map(lambda x : ( 
+        {"input_1" : process_img_test(x['input_1']), 
+         "input_2" : process_img_test(x['input_2'])})).batch(1).prefetch(1)
+    
+    print('test tf.data loaded')
+    
+    pred = model.predict(x=test_ds, batch_size=1)
+    return (1-np.argmax(pred,axis=1)).astype(bool), np.max(pred, axis=1)
 
 if __name__ == "__main__":
     
