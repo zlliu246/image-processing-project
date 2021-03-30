@@ -4,6 +4,7 @@ import pandas as pd
 from PIL import Image, ImageDraw
 from deepface.commons.functions import initialize_detector, load_image, detect_face2
 from deepface import DeepFace
+import processor.reid_processor as reid
 
 detector_backend = 'mtcnn'
 grayscale = False
@@ -67,11 +68,16 @@ def detect_deepface_cropped(img, person_boxes):
         face_detected = None
 
         try:
+            ## calls reid_processor to confirm identity
+            best_body_guess, body_confidence = reid.detect_body_cropped(cropped_img)
+            
             new_im = Image.fromarray(detected_face)
             new_im.save("current.jpg")
             df = DeepFace.find(img_path = "current.jpg", db_path = "db", enforce_detection=False)
             df.sort_values('VGG-Face_cosine', inplace=True, ascending=True)
             face_detected = re.split(r' |/|\\', df['identity'].iloc[0])[1]
+            
+            ## need code when face id is not confident, use reid to confirm/dispute
         except Exception as err:
             print("ERROR:", err)
 

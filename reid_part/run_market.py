@@ -21,7 +21,7 @@ from tensorflow import keras
 import numpy as np
 import cv2
 import market1501_dataset
-from tensorflow.keras.models import Model, load_model
+from tensorflow.keras.models import Model
 from tensorflow.keras import optimizers
 
 IMAGE_WIDTH = 60
@@ -50,6 +50,15 @@ def process_img_test(file_path):
     img.set_shape([IMAGE_HEIGHT, IMAGE_WIDTH, 3])
     return img
 
+def real_process_img_test(file_path):
+    img = tf.io.read_file(file_path)
+    img = tf.image.decode_jpeg(img, channels=3)
+    img = tf.image.central_crop(image, 0.8)
+    img = tf.image.resize(img, [IMAGE_HEIGHT, IMAGE_WIDTH])
+    img = tf.image.per_image_standardization(img)
+    img.set_shape([IMAGE_HEIGHT, IMAGE_WIDTH, 3])
+    return img
+    
 def process_label(y):
     y.set_shape([2])
     return y
@@ -138,10 +147,6 @@ def load_model(model_path):
     return model
 
 def check_images(model, image, db):
-#     image1 = tf.expand_dims(process_img_test(image1),axis=0)
-#     image2 = tf.expand_dims(process_img_test(image2),axis=0)
-#     print('img1:', image1.numpy().shape)
-#     print('img2:', image2.numpy().shape)
     
     def x():
         output = []
@@ -155,13 +160,13 @@ def check_images(model, image, db):
     )
         
     test_ds = test_ds.map(lambda x : ( 
-        {"input_1" : process_img_test(x['input_1']), 
-         "input_2" : process_img_test(x['input_2'])})).batch(1).prefetch(1)
+        {"input_1" : real_process_img_test(x['input_1']), 
+         "input_2" : real_process_img_test(x['input_2'])})).batch(1).prefetch(1)
     
     print('test tf.data loaded')
     
     pred = model.predict(x=test_ds, batch_size=1)
-    return (1-np.argmax(pred,axis=1)).astype(bool), np.max(pred, axis=1)
+    return (1-np.argmax(pred,axis=1)).astype(bool), pred[:,0]
 
 if __name__ == "__main__":
     
