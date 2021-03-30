@@ -15,9 +15,11 @@ from processor import process
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-i", "--input", type=str, default="dataset/2fps")
-parser.add_argument("-o", "--output", type=str, default="output")
-parser.add_argument("-f", "--fps", type=int, default=2)
+parser.add_argument("-i", "--input", type=str, help='Input Folder', default="dataset/2fps")
+parser.add_argument("-v", "--video", type=str, help='Video Path for single video', default="NA")
+parser.add_argument("-g", "--gpu", type=str, help='Select GPU by PCI_BUS_ID', default="NA")
+parser.add_argument("-o", "--output", type=str, help='Output Folder', default="output")
+parser.add_argument("-f", "--fps", type=int, help='FPS for output video', default=2)
 
 
 args = parser.parse_args()
@@ -27,12 +29,27 @@ INPUT_FOLDER = args.input
 OUTPUT_FOLDER = args.output
 FPS = args.fps
 
+try:
+    os.mkdir(OUTPUT_FOLDER)
+    print("OUTPUT_FOLDER created")
+except:
+    print("OUTPUT_FOLDER existed")
+
 print(f"INPUT_FOLDER: {INPUT_FOLDER}")
 print(f"OUTPUT_FOLDER: {OUTPUT_FOLDER}")
 print(f"FPS: {FPS}")
 print()
 
-videos = os.listdir(INPUT_FOLDER)
+if args.video == "NA":
+    videos = os.listdir(INPUT_FOLDER)
+else:
+    videos = [args.video]
+
+if args.gpu != "NA":
+    os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
+    os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
+
+
 for video in videos:
     print(f"PROCESSING VIDEO {video}")
     VIDEO_PATH = INPUT_FOLDER + "/" + video
