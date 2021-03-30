@@ -2,3 +2,13 @@
 __pycache__
 largestuff
 .ipynb_checkpoints
+proximity/models/nyu.h5
+deepface/weights/VGGFace2_DeepFace_weights_val-0.9034.h5
+deepface/weights/vgg_face_weights.h5
+deepface/weights/res10_300x300_ssd_iter_140000.caffemodel
+deepface/weights/openface_weights.h5
+deepface/weights/facenet_weights.h5
+deepface/weights/dlib_face_recognition_resnet_model_v1.dat
+deepface/weights/deploy.prototxt
+deepface/weights/deepid_keras_weights.h5
+deepface/weights/arcface_weights.h5

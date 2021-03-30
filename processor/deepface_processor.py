@@ -11,7 +11,7 @@ grayscale = False
 enforce_detection = False
 return_region = False
 db_folder = "db"
-col_dict = {"ZuoLin" : "Green", "JiaPeng": "Red"}
+col_dict = {"ZuoLin" : "Green", "JiaPeng": "Red", "Cheng": "Blue"}
 
 
 def detect_deepface(img):
@@ -30,7 +30,7 @@ def detect_deepface(img):
         try:
             new_im = Image.fromarray(detected_face)
             new_im.save("current.jpg")
-            df = DeepFace.find(img_path = "current.jpg", db_path = "db", enforce_detection=False)
+            df = DeepFace.find(img_path = "current.jpg", db_path = "db_face", enforce_detection=False)
             df.sort_values('VGG-Face_cosine', inplace=True, ascending=True)
             face_detected = re.split(r' |/|\\', df['identity'].iloc[0])[1]
         except Exception as err:
@@ -42,7 +42,7 @@ def detect_deepface(img):
 
         face_count += 1
             
-    output_img = drawBBoxs(img, bboxs, col_dict, col_dict.get(face_detected, "blue"))
+    output_img = drawBBoxs(img, bboxs, col_dict, col_dict.get(face_detected, "yellow"))
     
     return output_img, face_detected
 
@@ -73,7 +73,7 @@ def detect_deepface_cropped(img, person_boxes):
             
             new_im = Image.fromarray(detected_face)
             new_im.save("current.jpg")
-            df = DeepFace.find(img_path = "current.jpg", db_path = "db", enforce_detection=False)
+            df = DeepFace.find(img_path = "current.jpg", db_path = "db_face", enforce_detection=False)
             df.sort_values('VGG-Face_cosine', inplace=True, ascending=True)
             face_detected = re.split(r' |/|\\', df['identity'].iloc[0])[1]
             
@@ -86,11 +86,11 @@ def detect_deepface_cropped(img, person_boxes):
 
         print(f"face detected: {face_detected}")
 
-    output_img = drawBBoxs(img, bboxs, col_dict, col_dict.get(face_detected, "blue"))
+    output_img = drawBBoxs(img, bboxs, col_dict, col_dict.get(face_detected, "yellow"))
     return output_img, person_face_detected
 
 
-def drawBBoxs(base_img, bboxs, col_dict, colour="blue"):
+def drawBBoxs(base_img, bboxs, col_dict, colour="yellow"):
     output_img = base_img.copy()
     output_img = output_img[:, :, ::-1]
 
@@ -101,7 +101,7 @@ def drawBBoxs(base_img, bboxs, col_dict, colour="blue"):
         try:
             colour = col_dict[bbox[5]]
         except:
-            colour = "blue"
+            colour = "yellow"
         x0 = bbox[0]
         x1 = bbox[0] + bbox[2]
         y0 = bbox[1]
