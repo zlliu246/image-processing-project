@@ -67,13 +67,16 @@ def detect_deepface_cropped(img, person_boxes):
             return img
 
         x, y, w, h = detections[0]["box"]
-        detected_face = cropped_img[int(y):int(y+h), int(x):int(x+w)]
+        y_buffer = int(h * 0.5)
+        x_buffer = int(w * 0.5)
+        # detected_face = cropped_img[int(y):int(y+h), int(x):int(x+w)]
+        detected_face = cropped_img[max(0,int(y-y_buffer)):min(cropped_img.shape[0],int(y+h+y_buffer)), max(0,int(x-x_buffer)):min(cropped_img.shape[1],int(x+w+x_buffer))]
         face_detected = None
 
         try:
             ## calls reid_processor to confirm identity
             best_body_guess, body_confidence = reid.detect_body_cropped(cropped_img)
-            
+            detected_face = detected_face[:, :, ::-1]
             new_im = Image.fromarray(detected_face)
             tmp_image = str(int(time.time())) + ".jpg"
             new_im.save(tmp_image)
