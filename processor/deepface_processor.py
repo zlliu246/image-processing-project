@@ -6,6 +6,7 @@ from deepface.commons.functions import initialize_detector, load_image, detect_f
 from deepface import DeepFace
 import processor.reid_processor as reid
 import time
+import os
 
 detector_backend = 'mtcnn'
 grayscale = False
