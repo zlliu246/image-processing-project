@@ -2,7 +2,7 @@ import re
 import numpy as np
 import pandas as pd
 from PIL import Image, ImageDraw
-from deepface.commons.functions import load_image, detect_face2
+from deepface.commons.functions import initialize_detector, load_image, detect_face2
 from deepface import DeepFace
 # import processor.reid_processor as reid
 import os
@@ -30,6 +30,7 @@ def detect_deepface(img):
         face_detected = "Unknown"
         
         try:
+            detected_face = detected_face[:, :, ::-1]
             new_im = Image.fromarray(detected_face)
             tmp_image = str(int(time.time())) + ".jpg"
             new_im.save(tmp_image)
@@ -74,10 +75,12 @@ def detect_deepface_cropped(img, person_boxes):
         try:
             ## calls reid_processor to confirm identity
             # best_body_guess, body_confidence = reid.detect_body_cropped(cropped_img)
+            # best_body_guess, body_confidence = reid.detect_body_cropped(cropped_img)
+            detected_face = detected_face[:, :, ::-1]
             new_im = Image.fromarray(detected_face)
             tmp_image = str(int(time.time())) + ".jpg"
             new_im.save(tmp_image)
-            df = DeepFace.find( img_path=tmp_image, db_path=db_folder, enforce_detection=False)
+            df = DeepFace.find(img_path = tmp_image, db_path = db_folder, enforce_detection=False)
             os.remove(tmp_image)
             df.sort_values('VGG-Face_cosine', inplace=True, ascending=True)
             face_detected = re.split(r' |/|\\', df['identity'].iloc[0])[1]
@@ -119,6 +122,33 @@ def drawBBoxs(base_img, bboxs, col_dict, colour="yellow"):
         draw.text((x0 + 10, y0 + 10), bbox[5], fill=colour)
 #         draw.text((x0 + 10, y0 + 10), str(round(bbox[4],2)), fill=colour)
 
-        output_img = np.array(output_img)
-        output_img = output_img[:, :, ::-1]
-        return output_img
+    output_img = np.array(output_img)
+    output_img = output_img[:, :, ::-1]
+    return output_img
+
+def getIOU(x, y):
+    x_x1 = x[i][0]
+    x_x2 = x_x1 + x[i][2]
+    x_y1 = x[i][1]
+    x_y2 = x_y1 + x[i][3]
+
+    y_x1 = y[i][0]
+    y_x2 = y_x1 + y[i][2]
+    y_y1 = y[i][1]
+    y_y2 = y_y1 + y[i][3]
+    # determine the (x, y)-coordinates of the intersection rectangle
+    xA = max(x_x1, y_x1)
+    yA = max(x_y1, y_y1)
+    xB = min(x_x2, y_x2)
+    yB = min(x_y2, y_y2)
+
+    # compute the area of intersection rectangle
+    interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+    # 0 , 1 , 2 , 3
+    # x1, y1, x2, y2
+	  # compute the area of both the prediction and ground-truth rectangles
+    boxAArea = (x_x2 - x_x1 + 1) * (x_y2 - x_y1 + 1)
+    boxBArea = (y_x2 - y_x1 + 1) * (y_y2 - y_y1 + 1)
+
+    iou = interArea / float(boxAArea + boxBArea - interArea)
+    return iou
