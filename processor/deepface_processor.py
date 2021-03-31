@@ -29,6 +29,7 @@ def detect_deepface(img):
         face_detected = "Unknown"
         
         try:
+            detected_face = detected_face[:, :, ::-1]
             new_im = Image.fromarray(detected_face)
             tmp_image = str(int(time.time())) + ".jpg"
             new_im.save(tmp_image)
@@ -118,6 +119,6 @@ def drawBBoxs(base_img, bboxs, col_dict, colour="yellow"):
         draw.text((x0 + 10, y0 + 10), bbox[5], fill=colour)
 #         draw.text((x0 + 10, y0 + 10), str(round(bbox[4],2)), fill=colour)
 
-        output_img = np.array(output_img)
-        output_img = output_img[:, :, ::-1]
-        return output_img
+    output_img = np.array(output_img)
+    output_img = output_img[:, :, ::-1]
+    return output_img
