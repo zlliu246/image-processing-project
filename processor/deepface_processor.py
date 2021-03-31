@@ -126,3 +126,30 @@ def drawBBoxs(base_img, bboxs, col_dict, colour="yellow"):
     output_img = np.array(output_img)
     output_img = output_img[:, :, ::-1]
     return output_img
+
+def getIOU(x, y):
+    x_x1 = x[i][0]
+    x_x2 = x_x1 + x[i][2]
+    x_y1 = x[i][1]
+    x_y2 = x_y1 + x[i][3]     
+
+    y_x1 = y[i][0]
+    y_x2 = y_x1 + y[i][2]
+    y_y1 = y[i][1]
+    y_y2 = y_y1 + y[i][3]      
+    # determine the (x, y)-coordinates of the intersection rectangle
+    xA = max(x_x1, y_x1)
+    yA = max(x_y1, y_y1)
+    xB = min(x_x2, y_x2)
+    yB = min(x_y2, y_y2)
+
+    # compute the area of intersection rectangle
+    interArea = max(0, xB - xA + 1) * max(0, yB - yA + 1)
+    # 0 , 1 , 2 , 3
+    # x1, y1, x2, y2
+	  # compute the area of both the prediction and ground-truth rectangles
+    boxAArea = (x_x2 - x_x1 + 1) * (x_y2 - x_y1 + 1)
+    boxBArea = (y_x2 - y_x1 + 1) * (y_y2 - y_y1 + 1)
+
+    iou = interArea / float(boxAArea + boxBArea - interArea)
+    return iou
