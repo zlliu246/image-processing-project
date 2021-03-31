@@ -2,9 +2,10 @@ import re
 import numpy as np
 import pandas as pd
 from PIL import Image, ImageDraw
-from deepface.commons.functions import initialize_detector, load_image, detect_face2
+from deepface.commons.functions import load_image, detect_face2
 from deepface import DeepFace
-import processor.reid_processor as reid
+# import processor.reid_processor as reid
+import os
 import time
 
 detector_backend = 'mtcnn'
@@ -57,13 +58,14 @@ def detect_deepface_cropped(img, person_boxes):
     """
     bboxs = []
     person_face_detected = []
+    output_img = img.copy()
     for p_bbox in person_boxes:
         (xmin, ymin), (xmax, ymax) = p_bbox
         cropped_img = img[ymin:ymax, xmin:xmax]
         detections = detect_face2(img=cropped_img, detector_backend=detector_backend, grayscale=grayscale, enforce_detection=enforce_detection)
 
         if len(detections) != 1:  # Only retain images that has 1 detected face
-            return img
+            continue
 
         x, y, w, h = detections[0]["box"]
         detected_face = cropped_img[int(y):int(y+h), int(x):int(x+w)]
@@ -71,12 +73,11 @@ def detect_deepface_cropped(img, person_boxes):
 
         try:
             ## calls reid_processor to confirm identity
-            best_body_guess, body_confidence = reid.detect_body_cropped(cropped_img)
-            
+            # best_body_guess, body_confidence = reid.detect_body_cropped(cropped_img)
             new_im = Image.fromarray(detected_face)
             tmp_image = str(int(time.time())) + ".jpg"
             new_im.save(tmp_image)
-            df = DeepFace.find(img_path = tmp_image, db_path = db_folder, enforce_detection=False)
+            df = DeepFace.find( img_path=tmp_image, db_path=db_folder, enforce_detection=False)
             os.remove(tmp_image)
             df.sort_values('VGG-Face_cosine', inplace=True, ascending=True)
             face_detected = re.split(r' |/|\\', df['identity'].iloc[0])[1]
@@ -93,8 +94,8 @@ def detect_deepface_cropped(img, person_boxes):
         person_face_detected.append([(xmin, ymin), (xmax, ymax), face_detected])
 
         print(f"face detected: {face_detected}")
-
-    output_img = drawBBoxs(img, bboxs, col_dict, col_dict.get(face_detected, "yellow"))
+        if face_detected is not None:
+            output_img = drawBBoxs(output_img, bboxs, col_dict, col_dict.get(face_detected, "yellow"))
     return output_img, person_face_detected
 
 
