@@ -336,7 +336,20 @@ def correct_yolo_boxes(boxes, image_h, image_w, net_h, net_w):
         boxes[i].xmax = int((boxes[i].xmax - x_offset) / x_scale * image_w)
         boxes[i].ymin = int((boxes[i].ymin - y_offset) / y_scale * image_h)
         boxes[i].ymax = int((boxes[i].ymax - y_offset) / y_scale * image_h)
-        
+
+
+def resize_boxes(boxes, image_h, image_w, scale=0.3):
+    resized_boxes = []
+    for (xmin, ymin), (xmax, ymax) in boxes:
+        # x_scaled = int(((1+scale)*(xmax-xmin)-(xmax-xmin))/2)
+        y_scaled = int(((1+scale)*(ymax-ymin))/2)
+        # x_new_min = max(0, xmin-x_scaled)
+        # x_new_max = min(image_w, xmax+x_scaled)
+        y_new_min = max(0, ymin-y_scaled)
+        y_new_max = min(image_h, ymax+y_scaled)
+        resized_boxes.append([(xmin, y_new_min), (xmax, y_new_max)])
+    return resized_boxes
+
 def do_nms(boxes, nms_thresh):
     if len(boxes) > 0:
         nb_class = len(boxes[0].classes)

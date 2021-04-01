@@ -8,18 +8,19 @@ import matplotlib.pyplot as plt
 import cv2
 from PIL import Image, ImageDraw
 import tensorflow as tf
-from deepface.commons.functions import initialize_detector, load_image, detect_face2
+from deepface.commons.functions import load_image, detect_face2
 import os
 
 from processor import process
 import argparse
 
+
 parser = argparse.ArgumentParser()
-parser.add_argument("-i", "--input", type=str, help='Input Folder', default="dataset/2fps")
-parser.add_argument("-v", "--video", type=str, help='Video Path for single video', default="NA")
-parser.add_argument("-g", "--gpu", type=str, help='Select GPU by PCI_BUS_ID', default="NA")
+parser.add_argument("-i", "--input", type=str, help='Input Folder', default="./REDUCED_VIDEOS")
+parser.add_argument("-v", "--video", type=str, help='Video Path for single video', default="multiple_obj.mp4")
+parser.add_argument("-g", "--gpu", type=str, help='Select GPU by PCI_BUS_ID', default="0")
 parser.add_argument("-o", "--output", type=str, help='Output Folder', default="output")
-parser.add_argument("-f", "--fps", type=int, help='FPS for output video', default=2)
+parser.add_argument("-f", "--fps", type=int, help='FPS for output video', default=10)
 
 
 args = parser.parse_args()
@@ -53,7 +54,7 @@ if args.gpu != "NA":
 for video in videos:
     print(f"PROCESSING VIDEO {video}")
     VIDEO_PATH = INPUT_FOLDER + "/" + video
-    OUTPUT_PATH = OUTPUT_FOLDER + "/" + video
+    OUTPUT_PATH = OUTPUT_FOLDER + "/" + video.replace(".mp4", ".avi")  # My windows machine couldnt view in mp4, can change accordingly
 
     current_frame = 1
     cap = cv2.VideoCapture(VIDEO_PATH)
