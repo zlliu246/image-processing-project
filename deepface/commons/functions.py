@@ -49,89 +49,96 @@ def initialize_input(img1_path, img2_path = None):
 	
 	return img_list, bulkProcess
 
+def run_once(f):
+	def wrapper(*args, **kwargs):
+		if not wrapper.has_run:
+			wrapper.has_run = True
+			return f(*args, **kwargs)
+	wrapper.has_run = False
+	return wrapper
+
+@run_once
 def initialize_detector(detector_backend):
-	
 	global face_detector
-	
 	home = str(Path.home())
-	
+
 	#eye detector is common for opencv and ssd
 	if detector_backend == 'opencv' or detector_backend == 'ssd':
 		opencv_path = get_opencv_path()
 		eye_detector_path = opencv_path+"haarcascade_eye.xml"
-		
+
 		if os.path.isfile(eye_detector_path) != True:
 			raise ValueError("Confirm that opencv is installed on your environment! Expected path ",eye_detector_path," violated.")
-		
+
 		global eye_detector
 		eye_detector = cv2.CascadeClassifier(eye_detector_path)
-		
+
 	#------------------------------
 	#face detectors
 	if detector_backend == 'opencv':
 		opencv_path = get_opencv_path()
 		face_detector_path = opencv_path+"haarcascade_frontalface_default.xml"
-		
+
 		if os.path.isfile(face_detector_path) != True:
 			raise ValueError("Confirm that opencv is installed on your environment! Expected path ",face_detector_path," violated.")
-		
+
 		face_detector = cv2.CascadeClassifier(face_detector_path)
-	
+
 	elif detector_backend == 'ssd':
-	
+
 		#check required ssd model exists in the home/.deepface/weights folder
-		
+
 		#model structure
 		if os.path.isfile(home+'/.deepface/weights/deploy.prototxt') != True:
-			
+
 			print("deploy.prototxt will be downloaded...")
-			
+
 			url = "https://github.com/opencv/opencv/raw/3.4.0/samples/dnn/face_detector/deploy.prototxt"
-			
+
 			output = home+'/.deepface/weights/deploy.prototxt'
-			
+
 			gdown.download(url, output, quiet=False)
-		
+
 		#pre-trained weights
 		if os.path.isfile(home+'/.deepface/weights/res10_300x300_ssd_iter_140000.caffemodel') != True:
-			
+
 			print("res10_300x300_ssd_iter_140000.caffemodel will be downloaded...")
-			
+
 			url = "https://github.com/opencv/opencv_3rdparty/raw/dnn_samples_face_detector_20170830/res10_300x300_ssd_iter_140000.caffemodel"
-			
+
 			output = home+'/.deepface/weights/res10_300x300_ssd_iter_140000.caffemodel'
-			
+
 			gdown.download(url, output, quiet=False)
-		
+
 		face_detector = cv2.dnn.readNetFromCaffe(
-			home+"/.deepface/weights/deploy.prototxt", 
+			home+"/.deepface/weights/deploy.prototxt",
 			home+"/.deepface/weights/res10_300x300_ssd_iter_140000.caffemodel"
 		)
-		
+
 	elif detector_backend == 'dlib':
 		import dlib #this is not a must library within deepface. that's why, I didn't put this import to a global level. version: 19.20.0
-		
+
 		global sp
-		
+
 		face_detector = dlib.get_frontal_face_detector()
-		
+
 		#check required file exists in the home/.deepface/weights folder
 		if os.path.isfile(home+'/.deepface/weights/shape_predictor_5_face_landmarks.dat') != True:
-			
-			print("shape_predictor_5_face_landmarks.dat.bz2 is going to be downloaded") 
-			
+
+			print("shape_predictor_5_face_landmarks.dat.bz2 is going to be downloaded")
+
 			url = "http://dlib.net/files/shape_predictor_5_face_landmarks.dat.bz2"
 			output = home+'/.deepface/weights/'+url.split("/")[-1]
-			
+
 			gdown.download(url, output, quiet=False)
-			
+
 			zipfile = bz2.BZ2File(output)
 			data = zipfile.read()
 			newfilepath = output[:-4] #discard .bz2 extension
 			open(newfilepath, 'wb').write(data)
-		
+
 		sp = dlib.shape_predictor(home+"/.deepface/weights/shape_predictor_5_face_landmarks.dat")
-		
+
 	elif detector_backend == 'mtcnn':
 		face_detector = MTCNN()
 
@@ -185,6 +192,7 @@ def load_image(img):
 		img = cv2.imread(img)
 	
 	return img
+
 
 def detect_face2(img, detector_backend = 'opencv', grayscale = False, enforce_detection = True):
 	
@@ -296,7 +304,6 @@ def detect_face2(img, detector_backend = 'opencv', grayscale = False, enforce_de
 				raise ValueError("Face could not be detected. Please confirm that the picture is a face photo or consider to set enforce_detection param to False.") 
 		
 	elif detector_backend == 'mtcnn':
-		
 		img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB) #mtcnn expects RGB but OpenCV read BGR
 		detections = face_detector.detect_faces(img_rgb)
 		return detections
