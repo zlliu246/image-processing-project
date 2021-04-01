@@ -41,5 +41,6 @@ def detect_objects_yolo(image):
     # draw bounding boxes on the image using labels
     draw_boxes(image, boxes, labels, obj_thresh, wanted_labels)
     person_boxes, object_boxes = get_wanted_boxes(boxes, labels, obj_thresh, wanted_labels)
+    person_boxes = resize_boxes(person_boxes, image_h, image_w, 0.3)
 
     return (image).astype('uint8'), person_boxes, object_boxes
