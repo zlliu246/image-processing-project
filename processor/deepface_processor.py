@@ -127,15 +127,15 @@ def drawBBoxs(base_img, bboxs, col_dict, colour="yellow"):
     return output_img
 
 def getIOU(x, y):
-    x_x1 = x[i][0]
-    x_x2 = x_x1 + x[i][2]
-    x_y1 = x[i][1]
-    x_y2 = x_y1 + x[i][3]
+    x_x1 = x[0]
+    x_x2 = x_x1 + x[2]
+    x_y1 = x[1]
+    x_y2 = x_y1 + x[3]
 
-    y_x1 = y[i][0]
-    y_x2 = y_x1 + y[i][2]
-    y_y1 = y[i][1]
-    y_y2 = y_y1 + y[i][3]
+    y_x1 = y[0]
+    y_x2 = y_x1 + y[2]
+    y_y1 = y[1]
+    y_y2 = y_y1 + y[3]
     # determine the (x, y)-coordinates of the intersection rectangle
     xA = max(x_x1, y_x1)
     yA = max(x_y1, y_y1)
