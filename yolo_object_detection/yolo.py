@@ -397,6 +397,8 @@ def draw_boxes(image, boxes, labels, obj_thresh, wanted_labels):
                 # print(labels[i] + ': ' + str(box.classes[i]*100) + '%')
                 
         if label >= 0 and label_str in wanted_labels:
+            if label_str == "person":
+                continue
             cv2.rectangle(image, (box.xmin,box.ymin), (box.xmax,box.ymax), (0,255,0), 3)
             cv2.putText(image, 
                         label_str + ' ' + str(box.get_score()), 

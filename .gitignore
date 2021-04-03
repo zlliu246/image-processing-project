@@ -12,4 +12,11 @@ deepface/weights/dlib_face_recognition_resnet_model_v1.dat
 deepface/weights/deploy.prototxt
 deepface/weights/deepid_keras_weights.h5
 deepface/weights/arcface_weights.h5
+REDUCED_VIDEOS/*
+output/*
+*.jpg
+*.zip
+*.out
+reid_part/*.h5
+db_face/*.pkl
 .ipynb_checkpoints/face-checkpoint.ipynb

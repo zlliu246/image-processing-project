@@ -1,28 +1,33 @@
 import argparse
 
-parser = argparse.ArgumentParser()
-parser.add_argument("-d", "--data_dir", dest="data_dir", type=str, metavar='<str>', default='datasets', help='path to dataset')
-parser.add_argument('-e','--epochs', dest="epochs", type=int, metavar='<int>', default=100, help='max epochs for training')
-parser.add_argument('-b','--batch_size', dest="batch_size", type=int, metavar='<int>', default=32, help='batch_size for training')
-parser.add_argument('-l','--logs', dest="logs_dir", type=str, metavar='<str>',default='logs/', help='path to logs')
-parser.add_argument('-m', '--mode', dest='mode', type=str, metavar='<str>', default='train', help='mode - train, val, or test')
-parser.add_argument('-s', '--save', dest='save', type=str, metavar='<str>', help='mode - train, val, or test')
-parser.add_argument('-g', '--gpu',dest='gpu',type=int,metavar='<int>')
+# parser = argparse.ArgumentParser()
+# parser.add_argument("-d", "--data_dir", dest="data_dir", type=str, metavar='<str>', default='datasets', help='path to dataset')
+# parser.add_argument('-e','--epochs', dest="epochs", type=int, metavar='<int>', default=100, help='max epochs for training')
+# parser.add_argument('-b','--batch_size', dest="batch_size", type=int, metavar='<int>', default=32, help='batch_size for training')
+# parser.add_argument('-l','--logs', dest="logs_dir", type=str, metavar='<str>',default='logs/', help='path to logs')
+# parser.add_argument('-m', '--mode', dest='mode', type=str, metavar='<str>', default='train', help='mode - train, val, or test')
+# parser.add_argument('-s', '--save', dest='save', type=str, metavar='<str>', help='mode - train, val, or test')
+# parser.add_argument('-g', '--gpu',dest='gpu',type=int,metavar='<int>')
 
-FLAGS = parser.parse_args()
+# FLAGS = parser.parse_args()
 
 import os
-os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
-os.environ['CUDA_VISIBLE_DEVICES'] = str(FLAGS.gpu)
+# os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
+# os.environ['CUDA_VISIBLE_DEVICES'] = str(0)
+
+os.environ['AUTOGRAPH_VERBOSITY'] = '0'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2' 
 
 import tensorflow as tf
 from tensorflow.keras import Input
 from tensorflow import keras
 import numpy as np
 import cv2
-import market1501_dataset
+import reid_part.market1501_dataset
 from tensorflow.keras.models import Model
 from tensorflow.keras import optimizers
+
+tf.get_logger().setLevel('INFO')
 
 IMAGE_WIDTH = 60
 IMAGE_HEIGHT = 160
@@ -37,7 +42,7 @@ def process_img_train(file_path):
     img = tf.image.random_hue(img, max_delta=0.2)
     img = tf.image.random_contrast(img, lower=0.5, upper=1.5)
     img = tf.image.per_image_standardization(img)
-    print(img.get_shape())
+#     print(img.get_shape())
     img.set_shape([IMAGE_HEIGHT, IMAGE_WIDTH, 3])
     return img
 
@@ -46,14 +51,14 @@ def process_img_test(file_path):
     img = tf.image.decode_jpeg(img, channels=3)
     img = tf.image.resize(img, [IMAGE_HEIGHT, IMAGE_WIDTH])
     img = tf.image.per_image_standardization(img)
-    print(img.get_shape())
+#     print(img.get_shape())
     img.set_shape([IMAGE_HEIGHT, IMAGE_WIDTH, 3])
     return img
 
 def real_process_img_test(file_path):
     img = tf.io.read_file(file_path)
     img = tf.image.decode_jpeg(img, channels=3)
-    img = tf.image.central_crop(image, 0.8)
+    img = tf.image.central_crop(img, 0.8)
     img = tf.image.resize(img, [IMAGE_HEIGHT, IMAGE_WIDTH])
     img = tf.image.per_image_standardization(img)
     img.set_shape([IMAGE_HEIGHT, IMAGE_WIDTH, 3])
@@ -129,10 +134,10 @@ def network(weight_decay, batch_size):
     
     return Model(inputs=[images1,images2], outputs=fc2)
 
-def load_model(model_path):
+def load_model(model_path
+              ):
     weight_decay = 0.0005
-    FLAGS.batch_size = 1
-    model = network(weight_decay, FLAGS.batch_size)
+    model = network(weight_decay, 1)
     
     model.load_weights(model_path)
     
@@ -146,6 +151,7 @@ def load_model(model_path):
     
     return model
 
+@tf.autograph.experimental.do_not_convert
 def check_images(model, image, db):
     
     def x():
@@ -160,10 +166,8 @@ def check_images(model, image, db):
     )
         
     test_ds = test_ds.map(lambda x : ( 
-        {"input_1" : real_process_img_test(x['input_1']), 
-         "input_2" : real_process_img_test(x['input_2'])})).batch(1).prefetch(1)
-    
-    print('test tf.data loaded')
+        {"input_1" : process_img_test(x['input_1']), 
+         "input_2" : process_img_test(x['input_2'])})).batch(1).prefetch(1)
     
     pred = model.predict(x=test_ds, batch_size=1)
     return (1-np.argmax(pred,axis=1)).astype(bool), pred[:,0]
@@ -182,7 +186,7 @@ if __name__ == "__main__":
     
     ds = ds.map(lambda x, y : ( 
         {"input_1" : process_img_train(x['input_1']), 
-         "input_2" : process_img_train(x['input_2'])},
+         "input_2" : real_process_img_train(x['input_2'])},
         process_label(y))).batch(FLAGS.batch_size).prefetch(FLAGS.batch_size)
                 
     print('data mapping working')
@@ -195,8 +199,8 @@ if __name__ == "__main__":
     )
         
     test_ds = test_ds.map(lambda x, y : ( 
-        {"input_1" : process_img_test(x['input_1']), 
-         "input_2" : process_img_test(x['input_2'])},
+        {"input_1" : real_process_img_test(x['input_1']), 
+         "input_2" : real_process_img_test(x['input_2'])},
         process_label(y))).batch(FLAGS.batch_size).prefetch(FLAGS.batch_size)
     print('test tf.data loaded')
 

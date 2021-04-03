@@ -1,29 +1,30 @@
 import warnings
 warnings.filterwarnings("ignore")
 
+import argparse
+import os
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-i", "--input", dest="input", type=str, metavar='<str>', help='Input Folder', default="./REDUCED_VIDEOS")
+parser.add_argument("-v", "--video", dest="video", type=str, metavar='<str>', help='Video Path for single video')
+parser.add_argument("-g", "--gpu", dest="gpu", type=str, metavar='<str>', help='Select GPU by PCI_BUS_ID', default="0")
+parser.add_argument("-o", "--output", dest="output", type=str, metavar='<str>', help='Output Folder', default="output")
+parser.add_argument("-f", "--fps", dest="fps", type=int, metavar='<int>', help='FPS for output video', default=10)
+
+args = parser.parse_args()
+
+os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
+os.environ['CUDA_VISIBLE_DEVICES'] = str(args.gpu)
+
 import pandas as pd
 import numpy as np
 import re
-import matplotlib.pyplot as plt
 import cv2
 from PIL import Image, ImageDraw
 import tensorflow as tf
 from deepface.commons.functions import load_image, detect_face2
-import os
 
 from processor import process
-import argparse
-
-
-parser = argparse.ArgumentParser()
-parser.add_argument("-i", "--input", type=str, help='Input Folder', default="./REDUCED_VIDEOS")
-parser.add_argument("-v", "--video", type=str, help='Video Path for single video', default="multiple_obj.mp4")
-parser.add_argument("-g", "--gpu", type=str, help='Select GPU by PCI_BUS_ID', default="0")
-parser.add_argument("-o", "--output", type=str, help='Output Folder', default="output")
-parser.add_argument("-f", "--fps", type=int, help='FPS for output video', default=10)
-
-
-args = parser.parse_args()
 
 # constants
 INPUT_FOLDER = args.input
@@ -46,10 +47,6 @@ if args.video == "NA":
 else:
     videos = [args.video]
 
-if args.gpu != "NA":
-    os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
-    os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
-
 
 for video in videos:
     print(f"PROCESSING VIDEO {video}")
@@ -65,6 +62,8 @@ for video in videos:
 
     out = cv2.VideoWriter(OUTPUT_PATH, cv2.VideoWriter_fourcc("M", "J", "P", "G"), FPS, (frame_width, frame_height))
     out.write(frame)
+    
+    old_ballots = []
 
     # parsing video frame by frame
     while cap.isOpened():
@@ -80,7 +79,7 @@ for video in videos:
             """
             ATTENTION: All your model processing goes into the "process" function
             """
-            new_img = process(img)
+            new_img, old_ballots = process(img, old_ballots)
 
             out.write(new_img)
 
