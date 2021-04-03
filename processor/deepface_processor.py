@@ -276,3 +276,4 @@ def drawBBox2(base_img, x0,x1,y0,y1, name, col_dict, colour="yellow"):
     output_img = np.array(output_img)
     output_img = output_img[:, :, ::-1]
     return output_img
+
